@@ -15,8 +15,8 @@
 #include <unistd.h>
 
 #if defined(__linux__)
-#  include <sys/statfs.h>
 #  include <mntent.h>
+#  include <sys/statfs.h>
 /* Not all Linux distros have linux/magic.h include available where */
 /* TMPFS_MAGIC is defined. */
 #  define TMPFS_MAGIC 0x01021994
@@ -26,8 +26,9 @@
 #elif defined(__NetBSD__)
 #  include <sys/statvfs.h>
 #elif defined(__sun)
-#  include <sys/statvfs.h>
 #  include <sys/mnttab.h>
+#  include <sys/statvfs.h>
+#  include <sys/vfstab.h>
 #endif /* __linux__ */
 
 static bool try_create_directory(const char* path)
@@ -241,10 +242,31 @@ static void iterate_getmntent(const char* path, struct ramfs_candidate* largest_
     if (mnttab == NULL) {
         return;
     }
-    while (getmntany(mnttab, &mountpoint, &ramfs_mountpoint) == 0) {
+    while (getmntany(mnttab, &mountpoint, &ramfs_mountpoint) == 0
+           && mountpoint.mnt_mountp != NULL) {
         assign_if_freer_fs_path(mountpoint.mnt_mountp, largest_candidate);
     }
     fclose(mnttab);
+#else
+    (void)path;
+    (void)largest_candidate;
+#endif
+}
+
+static void iterate_getvfsent(struct ramfs_candidate* largest_candidate)
+{
+#if defined(__sun)
+    struct vfstab mountpoint = {0};
+    struct vfstab ramfs_mountpoint = { .vfs_fstype = "tmpfs" };
+    FILE* vfstab = fopen("/etc/vfstab", "r");
+    if (vfstab == NULL) {
+        return;
+    }
+    while (getvfsany(vfstab, &mountpoint, &ramfs_mountpoint) == 0
+           && mountpoint.vfs_mountp != NULL) {
+        assign_if_freer_fs_path(mountpoint.vfs_mountp, largest_candidate);
+    }
+    fclose(vfstab);
 #else
     (void)largest_candidate;
 #endif
@@ -280,6 +302,8 @@ static char* get_largest_ramfs(void)
     iterate_getmntent("/etc/fstab", &largest_candidate);
     /* SunOS */
     iterate_getmntent("/etc/mnttab", &largest_candidate);
+
+    iterate_getvfsent(&largest_candidate);
 
     if (largest_candidate.fs_free == 0) {
         return NULL;
