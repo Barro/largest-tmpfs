@@ -16,6 +16,7 @@
 
 #if defined(__linux__)
 #  include <sys/statfs.h>
+#  include <mntent.h>
 /* Not all Linux distros have linux/magic.h include available where */
 /* TMPFS_MAGIC is defined. */
 #  define TMPFS_MAGIC 0x01021994
@@ -24,6 +25,9 @@
 #  include <sys/statvfs.h>
 #elif defined(__NetBSD__)
 #  include <sys/statvfs.h>
+#elif defined(__sun)
+#  include <sys/statvfs.h>
+#  include <sys/mnttab.h>
 #endif /* __linux__ */
 
 static bool try_create_directory(const char* path)
@@ -96,6 +100,14 @@ static bool is_path_ramfs(const char* fs_path)
     if (strcmp(stats.f_fstypename, "tmpfs") == 0) {
         return true;
     }
+#elif defined(__sun)
+    struct statvfs stats = {0};
+    if (statvfs(fs_path, &stats) != 0) {
+        return false;
+    }
+    if (strcmp(stats.f_basetype, "tmpfs") == 0) {
+        return true;
+    }
 #endif
     return false;
 }
@@ -107,6 +119,10 @@ static int64_t get_fs_size(const char* fs_path)
     statfs(fs_path, &stats);
     return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+    struct statvfs stats = {0};
+    statvfs(fs_path, &stats);
+    return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
+#elif defined(__sun)
     struct statvfs stats = {0};
     statvfs(fs_path, &stats);
     return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
@@ -192,7 +208,7 @@ static void iterate_getfsstat(struct ramfs_candidate* largest_candidate)
 #  elif defined(__NetBSD__)
     int returned_fs = getvfsstat(fs_list, sizeof(struct statvfs) * allocated_fs, MNT_NOWAIT);
     const struct statvfs* current_fs = fs_list;
-#  endif /* __FreeBSD__ */
+#  endif
     if (returned_fs == -1) {
         free(fs_list);
         return;
@@ -201,6 +217,34 @@ static void iterate_getfsstat(struct ramfs_candidate* largest_candidate)
         assign_if_freer_fs_path(current_fs->f_mntonname, largest_candidate);
     }
     free(fs_list);
+#else
+    (void)largest_candidate;
+#endif
+}
+
+static void iterate_getmntent(const char* path, struct ramfs_candidate* largest_candidate)
+{
+#if defined(__linux__)
+    struct mntent* mountpoint = NULL;
+    FILE* mnttab = setmntent(path, "r");
+    if (mnttab == NULL) {
+        return;
+    }
+    while ((mountpoint = getmntent(mnttab)) != NULL) {
+        assign_if_freer_fs_path(mountpoint->mnt_dir, largest_candidate);
+    }
+    endmntent(mnttab);
+#elif defined(__sun)
+    struct mnttab mountpoint = {0};
+    struct mnttab ramfs_mountpoint = { .mnt_fstype = "tmpfs" };
+    FILE* mnttab = fopen(path, "r");
+    if (mnttab == NULL) {
+        return;
+    }
+    while (getmntany(mnttab, &mountpoint, &ramfs_mountpoint) == 0) {
+        assign_if_freer_fs_path(mountpoint.mnt_mountp, largest_candidate);
+    }
+    fclose(mnttab);
 #else
     (void)largest_candidate;
 #endif
@@ -224,9 +268,18 @@ static char* get_largest_ramfs(void)
         assign_if_freer_fs_path(fs_path, &largest_candidate);
     }
 
+    /* NetBSD and Linux */
     iterate_proc_mounts("/proc/mounts", &largest_candidate);
+    /* Just Linux */
     iterate_proc_mounts("/proc/self/mounts", &largest_candidate);
+
     iterate_getfsstat(&largest_candidate);
+
+    /* Linux */
+    iterate_getmntent("/etc/mtab", &largest_candidate);
+    iterate_getmntent("/etc/fstab", &largest_candidate);
+    /* SunOS */
+    iterate_getmntent("/etc/mnttab", &largest_candidate);
 
     if (largest_candidate.fs_free == 0) {
         return NULL;
