@@ -105,11 +105,14 @@ static int64_t get_fs_size(const char* fs_path)
 #if defined(__linux__)
     struct statfs stats = {0};
     statfs(fs_path, &stats);
+    return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     struct statvfs stats = {0};
     statvfs(fs_path, &stats);
-#endif
     return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
+#else
+    return 0;
+#endif
 }
 
 static int64_t read_ramfs_free(const char* fs_path)
