@@ -1,0 +1,9 @@
+includedir=@includedir@
+libdir=@libdir@
+
+Name: liblargest-tmpfs
+Description: Finds the tmpfs file system location with the most free space
+URL: https://github.com/Barro/largest-tmpfs
+Version: @PACKAGE_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -llargest-tmpfs

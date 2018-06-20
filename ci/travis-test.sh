@@ -8,6 +8,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+test_installation()
+{
+    echo "#include <largest-tmpfs.h>" > "$WORKDIR"/header.c
+    echo "void test_lib(void) { largest_tmpfs_get(1024); }" >> "$WORKDIR"/header.c
+    flags=$(pkg-config --cflags --libs liblargest-tmpfs)
+    cc -shared -c $flags "$WORKDIR"/header.c
+}
+
 check_run_result() {
     # OS X is way harder to support than Linux or BSD, as there is no
     # comparable file system to tmpfs in there. Would require to
@@ -27,6 +35,13 @@ check_run_result() {
 meson build-meson
 ninja -C build-meson
 check_run_result build-meson/largest-tmpfs
+sudo ninja -C build-meson install
+test_installation
+sudo ninja -C build-meson uninstall
+if test_installation; then
+    echo >&2 "Meson uninstallation failed!"
+    exit 1
+fi
 
 bazel build :all
 check_run_result bazel-bin/largest-tmpfs
@@ -35,3 +50,6 @@ mkdir -p build-cmake
 ( cd build-cmake && cmake -GNinja .. )
 ninja -C build-cmake
 check_run_result build-cmake/largest-tmpfs
+sudo ninja -C build-cmake install
+test_installation
+# No uninstallation support in CMake...
