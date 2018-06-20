@@ -9,6 +9,10 @@ cleanup() {
 trap cleanup EXIT
 
 check_run_result() {
+    # OS X is way harder to support than Linux or BSD, as there is no
+    # comparable file system to tmpfs in there. Would require to
+    # figure out how to read block device types until a ram:// type is
+    # encountered or not without diskutil.
     if test "$TRAVIS_OS_NAME" = "osx"; then
         "$@" || return 0
         echo >&2 "Command $* unexpectedly succeeded!"
