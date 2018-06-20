@@ -15,7 +15,8 @@ install(TARGETS largest-tmpfs largest-tmpfs-lib
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
-set(PACKAGE_VERSION "0.0.0")
+file(READ version.txt PACKAGE_VERSION_raw)
+string(STRIP "${PACKAGE_VERSION_raw}" PACKAGE_VERSION)
 set(includedir "${CMAKE_INSTALL_INCLUDEDIR}")
 set(libdir "${CMAKE_INSTALL_LIBDIR}")
 configure_file("liblargest-tmpfs.pc.in" "liblargest-tmpfs.pc" @ONLY)
