@@ -1,23 +1,23 @@
 cc_library(
-    name = "lib/largest-ramfs",
-    srcs = ["largest-ramfs.c"],
-    hdrs = ["largest-ramfs.h"],
+    name = "lib/largest-tmpfs",
+    srcs = ["largest-tmpfs.c"],
+    hdrs = ["largest-tmpfs.h"],
     visibility = ["//visibility:private"],
 )
 
 cc_binary(
-    name = "largest-ramfs",
+    name = "largest-tmpfs",
     srcs = ["main.c"],
-    deps = [":lib/largest-ramfs"],
+    deps = [":lib/largest-tmpfs"],
 )
 
 cc_library(
-    name = "largest-ramfs-inc",
-    hdrs = ["largest-ramfs.c", "largest-ramfs.h"],
+    name = "largest-tmpfs-inc",
+    hdrs = ["largest-tmpfs.c", "largest-tmpfs.h"],
 )
 
 cc_binary(
-    name = "largest-ramfs-fuzz",
+    name = "largest-tmpfs-fuzz",
     srcs = ["fuzz.c"],
-    deps = ["largest-ramfs-inc"],
+    deps = ["largest-tmpfs-inc"],
 )

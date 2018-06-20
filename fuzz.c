@@ -1,20 +1,20 @@
-#include "largest-ramfs.c"
+#include "largest-tmpfs.c"
 
-static struct ramfs_candidate ramfs_candidate_new(void)
+static struct tmpfs_candidate tmpfs_candidate_new(void)
 {
-    struct ramfs_candidate result = {0};
+    struct tmpfs_candidate result = {0};
     result.required_fs_free = 1024 * 1024;
     return result;
 }
 
 static void fuzz_one(const char* path)
 {
-    struct ramfs_candidate largest_candidate;
-    largest_candidate = ramfs_candidate_new();
+    struct tmpfs_candidate largest_candidate;
+    largest_candidate = tmpfs_candidate_new();
     iterate_proc_mounts(path, &largest_candidate);
-    largest_candidate = ramfs_candidate_new();
+    largest_candidate = tmpfs_candidate_new();
     iterate_getmntent(path, &largest_candidate);
-    largest_candidate = ramfs_candidate_new();
+    largest_candidate = tmpfs_candidate_new();
     iterate_getvfsent(path, &largest_candidate);
 }
 

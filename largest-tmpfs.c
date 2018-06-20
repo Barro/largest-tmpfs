@@ -30,9 +30,9 @@
 #  include <sys/vfstab.h>
 #endif /* __linux__ */
 
-#include "largest-ramfs.h"
+#include "largest-tmpfs.h"
 
-struct ramfs_candidate
+struct tmpfs_candidate
 {
     uint64_t required_fs_free;
     uint64_t fs_free;
@@ -44,8 +44,8 @@ static bool try_create_directory(const char* path)
     const char* path_end;
     char* template_path_end;
     char* template_end;
-    const char suffix[] = "/.ramfs.XXXXXX";
-    char template[sizeof(((struct ramfs_candidate*)0)->fs_path) + sizeof(suffix)] = {0};
+    const char suffix[] = "/.tmpfs.XXXXXX";
+    char template[sizeof(((struct tmpfs_candidate*)0)->fs_path) + sizeof(suffix)] = {0};
 
     /* Strip the last slash */
     path_end = path + strlen(path);
@@ -77,7 +77,7 @@ static bool try_create_directory(const char* path)
     return true;
 }
 
-static bool is_path_ramfs(const char* fs_path)
+static bool is_path_tmpfs(const char* fs_path)
 {
 #if defined(__linux__)
     struct statfs stats = {0};
@@ -139,18 +139,18 @@ static uint64_t get_fs_size(const char* fs_path)
 #endif
 }
 
-static uint64_t read_ramfs_free(const char* fs_path)
+static uint64_t read_tmpfs_free(const char* fs_path)
 {
-    if (!is_path_ramfs(fs_path)) {
+    if (!is_path_tmpfs(fs_path)) {
         return 0;
     }
     return get_fs_size(fs_path);
 }
 
 static bool assign_if_freer_fs_path(
-    const char* fs_path, struct ramfs_candidate* largest_candidate)
+    const char* fs_path, struct tmpfs_candidate* largest_candidate)
 {
-    uint64_t fs_free = read_ramfs_free(fs_path);
+    uint64_t fs_free = read_tmpfs_free(fs_path);
     if (fs_free < largest_candidate->required_fs_free) {
         return false;
     }
@@ -173,11 +173,11 @@ static bool assign_if_freer_fs_path(
 }
 
 static void iterate_proc_mounts(
-    const char* proc_mounts, struct ramfs_candidate* largest_candidate)
+    const char* proc_mounts, struct tmpfs_candidate* largest_candidate)
 {
     char mount_line[512] = "";
 
-    /* Try to figure out other ramfs locations based on device
+    /* Try to figure out other tmpfs locations based on device
        mountpoints. This is Linux specific thing: */
     FILE* mounts_fp = fopen(proc_mounts, "r");
     if (mounts_fp == NULL) {
@@ -202,7 +202,7 @@ static void iterate_proc_mounts(
     fclose(mounts_fp);
 }
 
-static void iterate_getfsstat(struct ramfs_candidate* largest_candidate)
+static void iterate_getfsstat(struct tmpfs_candidate* largest_candidate)
 {
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
     int i;
@@ -232,7 +232,7 @@ static void iterate_getfsstat(struct ramfs_candidate* largest_candidate)
 #endif
 }
 
-static void iterate_getmntent(const char* path, struct ramfs_candidate* largest_candidate)
+static void iterate_getmntent(const char* path, struct tmpfs_candidate* largest_candidate)
 {
 #if defined(__linux__)
     struct mntent* mountpoint = NULL;
@@ -246,12 +246,12 @@ static void iterate_getmntent(const char* path, struct ramfs_candidate* largest_
     endmntent(mnttab);
 #elif defined(__sun)
     struct mnttab mountpoint = {0};
-    struct mnttab ramfs_mountpoint = { .mnt_fstype = "tmpfs" };
+    struct mnttab tmpfs_mountpoint = { .mnt_fstype = "tmpfs" };
     FILE* mnttab = fopen(path, "r");
     if (mnttab == NULL) {
         return;
     }
-    while (getmntany(mnttab, &mountpoint, &ramfs_mountpoint) == 0
+    while (getmntany(mnttab, &mountpoint, &tmpfs_mountpoint) == 0
            && mountpoint.mnt_mountp != NULL) {
         assign_if_freer_fs_path(mountpoint.mnt_mountp, largest_candidate);
     }
@@ -263,16 +263,16 @@ static void iterate_getmntent(const char* path, struct ramfs_candidate* largest_
 }
 
 static void iterate_getvfsent(
-    const char* path, struct ramfs_candidate* largest_candidate)
+    const char* path, struct tmpfs_candidate* largest_candidate)
 {
 #if defined(__sun)
     struct vfstab mountpoint = {0};
-    struct vfstab ramfs_mountpoint = { .vfs_fstype = "tmpfs" };
+    struct vfstab tmpfs_mountpoint = { .vfs_fstype = "tmpfs" };
     FILE* vfstab = fopen(path, "r");
     if (vfstab == NULL) {
         return;
     }
-    while (getvfsany(vfstab, &mountpoint, &ramfs_mountpoint) == 0
+    while (getvfsany(vfstab, &mountpoint, &tmpfs_mountpoint) == 0
            && mountpoint.vfs_mountp != NULL) {
         assign_if_freer_fs_path(mountpoint.vfs_mountp, largest_candidate);
     }
@@ -283,14 +283,14 @@ static void iterate_getvfsent(
 #endif
 }
 
-const char* largest_ramfs_get(uint64_t minimum_free_bytes)
+const char* largest_tmpfs_get(uint64_t minimum_free_bytes)
 {
     size_t i;
-    struct ramfs_candidate largest_candidate = {0};
+    struct tmpfs_candidate largest_candidate = {0};
     /* First let's guess couple of locations in case we are inside a */
     /* container or other faked file system without /proc/ access but */
-    /* possibly with some ramfs accesses: */
-    const char* const ramfs_guesses[] = {
+    /* possibly with some tmpfs accesses: */
+    const char* const tmpfs_guesses[] = {
         "/var/shm",
         "/dev/shm",
         "/run/shm",
@@ -299,8 +299,8 @@ const char* largest_ramfs_get(uint64_t minimum_free_bytes)
     assert(minimum_free_bytes > 0);
     largest_candidate.required_fs_free = minimum_free_bytes;
 
-    for (i = 0; i < sizeof(ramfs_guesses) / sizeof(*ramfs_guesses); i++) {
-        const char* fs_path = ramfs_guesses[i];
+    for (i = 0; i < sizeof(tmpfs_guesses) / sizeof(*tmpfs_guesses); i++) {
+        const char* fs_path = tmpfs_guesses[i];
         assign_if_freer_fs_path(fs_path, &largest_candidate);
     }
 

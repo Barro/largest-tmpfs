@@ -15,6 +15,6 @@
  * invalidated by the next call. This function is not thread safe and
  * should preferably used only at program start-up.
  */
-const char* largest_ramfs_get(const uint64_t minimum_free_bytes);
+const char* largest_tmpfs_get(const uint64_t minimum_free_bytes);
 
 #endif /* LARGEST_RAMFS_H */

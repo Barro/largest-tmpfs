@@ -1,8 +1,8 @@
-project('largest-ramfs', 'c')
+project('largest-tmpfs', 'c')
 
 executable(
-    'largest-ramfs',
-    ['largest-ramfs.c', 'main.c'],
+    'largest-tmpfs',
+    ['largest-tmpfs.c', 'main.c'],
     install: true)
 
-executable('largest-ramfs-fuzz', ['fuzz.c'])
+executable('largest-tmpfs-fuzz', ['fuzz.c'])

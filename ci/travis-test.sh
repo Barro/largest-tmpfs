@@ -26,12 +26,12 @@ check_run_result() {
 
 meson build-meson
 ninja -C build-meson
-check_run_result build-meson/largest-ramfs
+check_run_result build-meson/largest-tmpfs
 
 bazel build :all
-check_run_result bazel-bin/largest-ramfs
+check_run_result bazel-bin/largest-tmpfs
 
 mkdir -p build-cmake
 ( cd build-cmake && cmake -GNinja .. )
 ninja -C build-cmake
-check_run_result build-cmake/largest-ramfs
+check_run_result build-cmake/largest-tmpfs
