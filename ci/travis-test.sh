@@ -10,6 +10,7 @@ trap cleanup EXIT
 
 test_installation()
 {
+    largest-tmpfs --version
     echo "#include <largest-tmpfs.h>" > "$WORKDIR"/header.c
     echo "void test_lib(void) { largest_tmpfs_get(1024); }" >> "$WORKDIR"/header.c
     flags=$(pkg-config --cflags --libs liblargest-tmpfs)
