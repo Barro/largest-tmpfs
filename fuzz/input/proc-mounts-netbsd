@@ -1,0 +1,5 @@
+/dev/wd0a / ffs rw 0 0
+kernfs /kern kernfs rw 0 0
+ptyfs /dev/pts ptyfs rw 0 0
+procfs /proc proc rw 0 0
+tmpfs /var/shm tmpfs rw 0 0

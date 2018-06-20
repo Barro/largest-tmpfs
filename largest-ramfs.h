@@ -1,5 +1,5 @@
-#ifndef _LARGEST_RAMFS_H_
-#define _LARGEST_RAMFS_H_
+#ifndef LARGEST_RAMFS_H
+#define LARGEST_RAMFS_H
 
 #include <stdint.h>
 
@@ -17,4 +17,4 @@
  */
 const char* largest_ramfs_get(const uint64_t minimum_free_bytes);
 
-#endif /* _LARGEST_RAMFS_H_ */
+#endif /* LARGEST_RAMFS_H */

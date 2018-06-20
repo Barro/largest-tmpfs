@@ -279,6 +279,7 @@ static void iterate_getvfsent(
     }
     fclose(vfstab);
 #else
+    (void)path;
     (void)largest_candidate;
 #endif
 }
@@ -286,9 +287,7 @@ static void iterate_getvfsent(
 const char* largest_ramfs_get(uint64_t minimum_free_bytes)
 {
     size_t i;
-    struct ramfs_candidate largest_candidate = {
-        .required_fs_free = minimum_free_bytes
-    };
+    struct ramfs_candidate largest_candidate = {0};
     /* First let's guess couple of locations in case we are inside a */
     /* container or other faked file system without /proc/ access but */
     /* possibly with some ramfs accesses: */
@@ -299,6 +298,7 @@ const char* largest_ramfs_get(uint64_t minimum_free_bytes)
         "/tmp"
     };
     assert(minimum_free_bytes > 0);
+    largest_candidate.required_fs_free = minimum_free_bytes;
 
     for (i = 0; i < sizeof(ramfs_guesses) / sizeof(*ramfs_guesses); i++) {
         const char* fs_path = ramfs_guesses[i];

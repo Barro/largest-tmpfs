@@ -1,0 +1,8 @@
+fs_tmpfs = "tmpfs"
+fs_mfs = "mfs"
+fs_swap = "swap"
+space = " "
+dir_tmp = "/tmp"
+dir_dev = "/dev"
+dir_var = "/var"
+dir_shm = "/shm"

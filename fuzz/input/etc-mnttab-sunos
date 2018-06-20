@@ -1,0 +1,17 @@
+rpool/ROOT/omnios-1	/	zfs	dev=4350002	0
+/devices	/devices	devfs	dev=83c0000	1529446386
+/dev	/dev	dev	dev=8400000	1529446386
+ctfs	/system/contract	ctfs	dev=84c0001	1529446386
+proc	/proc	proc	dev=8440000	1529446386
+mnttab	/etc/mnttab	mntfs	dev=8500001	1529446386
+swap	/etc/svc/volatile	tmpfs	xattr,dev=8540001	1529446386
+objfs	/system/object	objfs	dev=8580001	1529446386
+bootfs	/system/boot	bootfs	dev=85c0001	1529446386
+sharefs	/etc/dfs/sharetab	sharefs	dev=8600001	1529446386
+/usr/lib/libc/libc_hwcap1.so.1	/lib/libc.so.1	lofs	dev=4350002	1529446391
+fd	/dev/fd	fd	rw,dev=8700001	1529446392
+swap	/tmp	tmpfs	xattr,dev=8540002	1529446394
+swap	/var/run	tmpfs	xattr,dev=8540003	1529446394
+rpool	/rpool	zfs	rw,devices,setuid,nonbmand,exec,xattr,atime,dev=4350003	1529446397
+-hosts	/net	autofs	nosuid,indirect,ignore,nobrowse,dev=87c0001	1529446399
+auto_home	/home	autofs	indirect,ignore,nobrowse,dev=87c0002	1529446399
