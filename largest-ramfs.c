@@ -31,6 +31,15 @@
 #  include <sys/vfstab.h>
 #endif /* __linux__ */
 
+#include "largest-ramfs.h"
+
+struct ramfs_candidate
+{
+    uint64_t required_fs_free;
+    uint64_t fs_free;
+    char fs_path[256];
+};
+
 static bool try_create_directory(const char* path)
 {
     const char* path_end;
@@ -68,12 +77,6 @@ static bool try_create_directory(const char* path)
     }
     return true;
 }
-
-struct ramfs_candidate
-{
-    int64_t fs_free;
-    char fs_path[256];
-};
 
 static bool is_path_ramfs(const char* fs_path)
 {
@@ -118,26 +121,26 @@ static bool is_path_ramfs(const char* fs_path)
     return false;
 }
 
-static int64_t get_fs_size(const char* fs_path)
+static uint64_t get_fs_size(const char* fs_path)
 {
 #if defined(__linux__)
     struct statfs stats = {0};
     statfs(fs_path, &stats);
-    return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
+    return (uint64_t)stats.f_bavail * (uint64_t)stats.f_frsize;
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     struct statvfs stats = {0};
     statvfs(fs_path, &stats);
-    return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
+    return (uint64_t)stats.f_bavail * (uint64_t)stats.f_frsize;
 #elif defined(__sun)
     struct statvfs stats = {0};
     statvfs(fs_path, &stats);
-    return (int64_t)stats.f_bavail * (int64_t)stats.f_bsize;
+    return (uint64_t)stats.f_bavail * (uint64_t)stats.f_frsize;
 #else
     return 0;
 #endif
 }
 
-static int64_t read_ramfs_free(const char* fs_path)
+static uint64_t read_ramfs_free(const char* fs_path)
 {
     if (!is_path_ramfs(fs_path)) {
         return 0;
@@ -145,12 +148,11 @@ static int64_t read_ramfs_free(const char* fs_path)
     return get_fs_size(fs_path);
 }
 
-static bool assign_if_freer_fs_path(const char* fs_path, struct ramfs_candidate* largest_candidate)
+static bool assign_if_freer_fs_path(
+    const char* fs_path, struct ramfs_candidate* largest_candidate)
 {
-    int64_t fs_free = read_ramfs_free(fs_path);
-    /* There should be at least 1 megabyte of free space to write
-       temporary output files: */
-    if (fs_free < 1024 * 1024) {
+    uint64_t fs_free = read_ramfs_free(fs_path);
+    if (fs_free < largest_candidate->required_fs_free) {
         return false;
     }
     if (fs_free <= largest_candidate->fs_free) {
@@ -261,12 +263,13 @@ static void iterate_getmntent(const char* path, struct ramfs_candidate* largest_
 #endif
 }
 
-static void iterate_getvfsent(struct ramfs_candidate* largest_candidate)
+static void iterate_getvfsent(
+    const char* path, struct ramfs_candidate* largest_candidate)
 {
 #if defined(__sun)
     struct vfstab mountpoint = {0};
     struct vfstab ramfs_mountpoint = { .vfs_fstype = "tmpfs" };
-    FILE* vfstab = fopen("/etc/vfstab", "r");
+    FILE* vfstab = fopen(path, "r");
     if (vfstab == NULL) {
         return;
     }
@@ -280,10 +283,12 @@ static void iterate_getvfsent(struct ramfs_candidate* largest_candidate)
 #endif
 }
 
-static char* get_largest_ramfs(void)
+const char* largest_ramfs_get(uint64_t minimum_free_bytes)
 {
     size_t i;
-    struct ramfs_candidate largest_candidate = {0};
+    struct ramfs_candidate largest_candidate = {
+        .required_fs_free = minimum_free_bytes
+    };
     /* First let's guess couple of locations in case we are inside a */
     /* container or other faked file system without /proc/ access but */
     /* possibly with some ramfs accesses: */
@@ -293,6 +298,8 @@ static char* get_largest_ramfs(void)
         "/run/shm",
         "/tmp"
     };
+    assert(minimum_free_bytes > 0);
+
     for (i = 0; i < sizeof(ramfs_guesses) / sizeof(*ramfs_guesses); i++) {
         const char* fs_path = ramfs_guesses[i];
         assign_if_freer_fs_path(fs_path, &largest_candidate);
@@ -311,7 +318,7 @@ static char* get_largest_ramfs(void)
     /* SunOS */
     iterate_getmntent("/etc/mnttab", &largest_candidate);
 
-    iterate_getvfsent(&largest_candidate);
+    iterate_getvfsent("/etc/vfstab", &largest_candidate);
 
     if (largest_candidate.fs_free == 0) {
         return NULL;
@@ -319,22 +326,15 @@ static char* get_largest_ramfs(void)
 
     {
         size_t fs_path_len = strlen(largest_candidate.fs_path);
-        char* result = calloc(1, fs_path_len + 1);
+        static char* result = NULL;
+        if (result != NULL) {
+            free(result);
+        }
+        result = calloc(1, fs_path_len + 1);
         if (result == NULL) {
             return NULL;
         }
         memcpy(result, largest_candidate.fs_path, fs_path_len);
         return result;
     }
-}
-
-int main()
-{
-    char* ramfs_path = get_largest_ramfs();
-    if (ramfs_path == NULL) {
-        return EXIT_FAILURE;
-    }
-    puts(ramfs_path);
-    free(ramfs_path);
-    return EXIT_SUCCESS;
 }
