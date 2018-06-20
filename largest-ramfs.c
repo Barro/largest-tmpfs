@@ -33,12 +33,15 @@
 
 static bool try_create_directory(const char* path)
 {
+    const char* path_end;
+    char* template_path_end;
+    char* template_end;
     const char suffix[] = "/.ramfs.XXXXXX";
     static char template[256];
     memset(template, 0, sizeof(template));
 
     /* Strip the last slash */
-    const char* path_end = path + strlen(path);
+    path_end = path + strlen(path);
     while (path < path_end && *(path_end - 1) == '/') {
         path_end--;
     }
@@ -51,16 +54,18 @@ static bool try_create_directory(const char* path)
     }
 
     memcpy(template, path, path_end - path);
-    char* template_path_end = template + (path_end - path);
+    template_path_end = template + (path_end - path);
     memcpy(template_path_end, suffix, sizeof(suffix));
-    char* template_end = template_path_end + sizeof(suffix) - 1;
+    template_end = template_path_end + sizeof(suffix) - 1;
     assert(template_end < template + sizeof(template));
 
-    char* result = mkdtemp(template);
-    if (result == NULL) {
-        return false;
+    {
+        char* result = mkdtemp(template);
+        if (result == NULL) {
+            return false;
+        }
+        rmdir(result);
     }
-    rmdir(result);
     return true;
 }
 
@@ -154,19 +159,23 @@ static bool assign_if_freer_fs_path(const char* fs_path, struct ramfs_candidate*
     if (!try_create_directory(fs_path)) {
         return false;
     }
-    size_t fs_path_len = strlen(fs_path);
-    if (sizeof(largest_candidate->fs_path) <= fs_path_len) {
-        return false;
+    {
+        size_t fs_path_len = strlen(fs_path);
+        if (sizeof(largest_candidate->fs_path) <= fs_path_len) {
+            return false;
+        }
+        largest_candidate->fs_free = fs_free;
+        memcpy(largest_candidate->fs_path, fs_path, fs_path_len);
+        largest_candidate->fs_path[fs_path_len] = '\0';
     }
-    largest_candidate->fs_free = fs_free;
-    memcpy(largest_candidate->fs_path, fs_path, fs_path_len);
-    largest_candidate->fs_path[fs_path_len] = '\0';
     return true;
 }
 
 static void iterate_proc_mounts(
     const char* proc_mounts, struct ramfs_candidate* largest_candidate)
 {
+    char mount_line[512] = "";
+
     /* Try to figure out other ramfs locations based on device
        mountpoints. This is Linux specific thing: */
     FILE* mounts_fp = fopen(proc_mounts, "r");
@@ -174,15 +183,14 @@ static void iterate_proc_mounts(
         return;
     }
 
-    char mount_line[512] = "";
-
     while (fgets(mount_line, sizeof(mount_line), mounts_fp) != NULL) {
+        char* path_end;
         char* fs_path = strchr(mount_line, ' ');
         if (fs_path == NULL) {
             continue;
         }
         fs_path++;
-        char* path_end = strchr(fs_path, ' ');
+        path_end = strchr(fs_path, ' ');
         if (path_end == NULL) {
             continue;
         }
@@ -309,13 +317,15 @@ static char* get_largest_ramfs(void)
         return NULL;
     }
 
-    size_t fs_path_len = strlen(largest_candidate.fs_path);
-    char* result = calloc(1, fs_path_len + 1);
-    if (result == NULL) {
-        return NULL;
+    {
+        size_t fs_path_len = strlen(largest_candidate.fs_path);
+        char* result = calloc(1, fs_path_len + 1);
+        if (result == NULL) {
+            return NULL;
+        }
+        memcpy(result, largest_candidate.fs_path, fs_path_len);
+        return result;
     }
-    memcpy(result, largest_candidate.fs_path, fs_path_len);
-    return result;
 }
 
 int main()

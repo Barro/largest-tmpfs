@@ -1,0 +1,4 @@
+cc_binary(
+    name = "largest-ramfs",
+    srcs = ["largest-ramfs.c"],
+)
