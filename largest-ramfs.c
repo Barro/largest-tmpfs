@@ -6,7 +6,6 @@
 #define _GNU_SOURCE
 
 #include <assert.h>
-#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -37,7 +36,7 @@ struct ramfs_candidate
 {
     uint64_t required_fs_free;
     uint64_t fs_free;
-    char fs_path[256];
+    char fs_path[512];
 };
 
 static bool try_create_directory(const char* path)
@@ -46,19 +45,19 @@ static bool try_create_directory(const char* path)
     char* template_path_end;
     char* template_end;
     const char suffix[] = "/.ramfs.XXXXXX";
-    static char template[256];
-    memset(template, 0, sizeof(template));
+    char template[sizeof(((struct ramfs_candidate*)0)->fs_path) + sizeof(suffix)] = {0};
 
     /* Strip the last slash */
     path_end = path + strlen(path);
     while (path < path_end && *(path_end - 1) == '/') {
         path_end--;
     }
+    assert(path <= path_end);
     if (path_end == path) {
         return false;
     }
 
-    if (sizeof(template) < strlen(path) + sizeof(suffix)) {
+    if (sizeof(template) < (path_end - path) + sizeof(suffix)) {
         return false;
     }
 
