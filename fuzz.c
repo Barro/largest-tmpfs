@@ -1,7 +1,5 @@
 #include "largest-ramfs.c"
 
-#define AFL_PERSISTENT_ITERATIONS 40000
-
 static struct ramfs_candidate ramfs_candidate_new(void)
 {
     struct ramfs_candidate result = {
@@ -37,14 +35,14 @@ int main(int argc, char* argv[])
         fclose(input);
     }
 
-#ifdef __AFL_HAVE_MANUAL_CONTROL
+#if defined(__AFL_HAVE_MANUAL_CONTROL) && !defined(__AFL_LOOP)
     fuzz_one("/dev/null");
     __AFL_INIT();
 #endif // #ifdef __AFL_HAVE_MANUAL_CONTROL
 
 #ifdef __AFL_LOOP
     fuzz_one("/dev/null");
-    while (__AFL_LOOP(AFL_PERSISTENT_ITERATIONS)) {
+    while (__AFL_LOOP(40000)) {
 #else // #ifdef __AFL_LOOP
     bool iterating = true;
     while (iterating) {
