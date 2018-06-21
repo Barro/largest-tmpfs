@@ -1,3 +1,5 @@
+load(":largest-tmpfs.bzl", "parser_test", "argument_test")
+
 cc_library(
     name = "lib/largest-tmpfs",
     srcs = ["largest-tmpfs.c"],
@@ -20,4 +22,28 @@ cc_binary(
     name = "largest-tmpfs-fuzz",
     srcs = ["fuzz.c"],
     deps = ["largest-tmpfs-inc"],
+)
+
+parser_test(
+    name = "test-parser",
+    binary = "largest-tmpfs-fuzz",
+    inputs = glob(["fuzz/input/*"]),
+)
+
+argument_test(
+    name = "test-version",
+    binary = "largest-tmpfs",
+    arguments = ["--version"],
+)
+
+argument_test(
+    name = "test-help-long",
+    binary = "largest-tmpfs",
+    arguments = ["--help"],
+)
+
+argument_test(
+    name = "test-help-short",
+    binary = "largest-tmpfs",
+    arguments = ["-h"],
 )

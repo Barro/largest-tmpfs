@@ -44,7 +44,7 @@ if test_installation; then
     exit 1
 fi
 
-bazel build :all
+bazel test ...:all
 check_run_result bazel-bin/largest-tmpfs
 
 mkdir -p build-cmake
