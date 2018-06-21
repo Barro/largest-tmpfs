@@ -3,9 +3,17 @@ project('largest-tmpfs', 'c')
 version_cmd = run_command('cat', join_paths(meson.source_root(), 'version.txt'))
 package_version = version_cmd.stdout().strip()
 
+comp = find_program('create-config.h.sh')
+
+config_h = custom_target(
+    'config.h',
+    output : 'config.h',
+    input : 'version.txt',
+    command : [comp, '@INPUT@', '@OUTPUT@'])
+
 lib = static_library(
     'largest-tmpfs',
-    ['largest-tmpfs.c'],
+    ['largest-tmpfs.c', config_h],
     install : true)
 
 executable(
@@ -13,7 +21,7 @@ executable(
     ['main.c'],
     install : true,
     link_with : lib,
-    c_args : ['-DLARGEST_TMPFS_VERSION=' + package_version])
+    c_args : ['-DHAVE_CONFIG_H'])
 
 executable('largest-tmpfs-fuzz', ['fuzz.c'])
 

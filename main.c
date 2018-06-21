@@ -4,12 +4,12 @@
 
 #include "largest-tmpfs.h"
 
-#ifndef LARGEST_TMPFS_VERSION
-#define LARGEST_TMPFS_VERSION devbuild
-#endif /* LARGEST_TMPFS_VERSION */
-
-#define STR_MACRO_VALUE(value) STR_MACRO_VALUE_(value)
-#define STR_MACRO_VALUE_(value) #value
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#else /* HAVE_CONFIG_H */
+#  define LARGEST_TMPFS_VERSION "devbuild"
+#  define LARGEST_TMPFS_SYSTEM "unknown"
+#endif /* HAVE_CONFIG_H */
 
 static void print_usage(const char* program_name, FILE* out)
 {
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 {
     if (argc > 1) {
         if (strcmp(argv[1], "--version") == 0) {
-            puts("largest-tmpfs " STR_MACRO_VALUE(LARGEST_TMPFS_VERSION));
+            puts("largest-tmpfs " LARGEST_TMPFS_VERSION " " LARGEST_TMPFS_SYSTEM);
             return EXIT_SUCCESS;
         } else if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
             print_usage(argv[0], stdout);

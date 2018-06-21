@@ -7,10 +7,18 @@ cc_library(
     visibility = ["//visibility:private"],
 )
 
+genrule(
+    name = "generate-config.h",
+    srcs = ["version.txt", "create-config.h.sh"],
+    outs = ["config.h"],
+    cmd = "$(location create-config.h.sh) $(location version.txt) $(OUTS)",
+)
+
 cc_binary(
     name = "largest-tmpfs",
-    srcs = ["main.c"],
+    srcs = ["main.c", "config.h"],
     deps = [":lib/largest-tmpfs"],
+    copts = ["-DHAVE_CONFIG_H"],
 )
 
 cc_library(
