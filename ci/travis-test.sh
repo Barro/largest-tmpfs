@@ -33,6 +33,16 @@ check_run_result() {
     fi
 }
 
+create_asan_bazelrc() {
+    {
+        echo build --strip=never
+        echo build --copt -fsanitize=address
+        echo build --copt -O1
+        echo build --copt -fno-omit-frame-pointer
+        echo build --linkopt -fsanitize=address
+    } > "$1"
+}
+
 meson build-meson
 ninja -C build-meson
 check_run_result build-meson/largest-tmpfs
@@ -45,8 +55,10 @@ if test_installation; then
 fi
 
 bazel test ...:all
-bazel test --run_under='valgrind --quiet --error-exitcode=1 --leak-check=full --track-origins=yes' ...:all
 check_run_result bazel-bin/largest-tmpfs
+bazel test --run_under='valgrind --quiet --error-exitcode=1 --leak-check=full --track-origins=yes' ...:all
+create_asan_bazelrc .bazelrc.asan
+bazel --bazelrc=.bazelrc.asan test ...:all
 
 mkdir -p build-cmake
 ( cd build-cmake && cmake -GNinja .. )

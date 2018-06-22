@@ -16,7 +16,7 @@ exec "{executable}" "{input}"
         is_executable = True)
     return [DefaultInfo(
         executable = test_runner,
-        runfiles=ctx.runfiles([executable, input_file]))]
+        runfiles = ctx.runfiles([executable, input_file]))]
 
 single_file_parser_test = rule(
     implementation = _parser_test,
@@ -58,7 +58,7 @@ exec "{executable}" "{arguments}"
         is_executable = True)
     return [DefaultInfo(
         executable = test_runner,
-        runfiles=ctx.runfiles([executable]))]
+        runfiles = ctx.runfiles([executable]))]
 
 _argument_test = rule(
     implementation = _argument_test_impl,
