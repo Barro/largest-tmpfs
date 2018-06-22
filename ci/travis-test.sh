@@ -45,6 +45,7 @@ if test_installation; then
 fi
 
 bazel test ...:all
+bazel test --run_under='valgrind --quiet --error-exitcode=1 --leak-check=full --track-origins=yes' ...:all
 check_run_result bazel-bin/largest-tmpfs
 
 mkdir -p build-cmake

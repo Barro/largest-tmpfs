@@ -9,6 +9,7 @@ addons:
     packages:
       - cmake
       - python3-pip
+      - valgrind
       - wget
 
 sudo: required
