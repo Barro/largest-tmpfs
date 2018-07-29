@@ -307,6 +307,16 @@ static void iterate_getvfsent(
 #endif
 }
 
+/**
+ * Finds out the file system mount path with the requested amount of
+ * minimum free space.
+ *
+ * This function is not thread safe.
+ *
+ * @return Pointer to a string with the longest detected memory based
+ *   file system path. Next call to this function can make the
+ *   previous returned pointer invalid.
+ */
 const char* largest_tmpfs_get(uint64_t minimum_free_bytes)
 {
     size_t i;
